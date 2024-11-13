@@ -56,12 +56,13 @@ class _SignupScreenState extends State<SignupScreen> {
         // Log user information
         print("User created: ${user.uid}");
 
-        // Add user data to Firestore
+        // Add user data to Firestore (including the 'status' field)
         await _firestore.collection('users').doc(user.uid).set({
           'username': _usernameController.text.trim(),
           'email': _emailController.text.trim(),
           'phone': _phoneController.text.trim(),
           'uid': user.uid,
+          'status': 'offline',  // Add default status field here
         });
 
         Fluttertoast.showToast(
