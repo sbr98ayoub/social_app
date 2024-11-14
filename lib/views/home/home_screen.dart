@@ -1,77 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore package
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'chat_screen.dart';
 import '../auth/login_screen.dart';
+import 'package:social_app/models/user_model.dart';
+import 'package:social_app/models/chat_model.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   final _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-Future<void> _signOut(BuildContext context) async {
-  // Set user status to offline before logging out
-  await _setUserOffline(_auth.currentUser);
+  // Fetch all users excluding the logged-in user
+  Future<List<UserModel>> _fetchUsers() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final userCollection = await firestore.collection('users').get();
 
-  // Sign out the user
-  await _auth.signOut();
+    final String currentUserUid = _auth.currentUser!.uid;
 
-  // Navigate to the login screen
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(builder: (context) => LoginScreen()),
-  );
-}
+    return userCollection.docs
+        .where((doc) => doc['uid'] != currentUserUid)
+        .map((doc) => UserModel.fromMap(doc.data()))
+        .toList();
+  }
 
+  // Fetch last message sent between the current user and the target user
+  Future<String> _getLastMessage(String userId) async {
+    final chatSnapshot = await FirebaseFirestore.instance
+        .collection('chats')
+        .where('senderId', isEqualTo: _auth.currentUser!.uid)
+        .where('receiverId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .get();
 
-  // Update the user's status in Firestore to 'online'
-  Future<void> _setUserOnline(User? user) async {
-    if (user != null) {
-      await _firestore.collection('users').doc(user.uid).update({
-        'status': 'online',
-      });
+    if (chatSnapshot.docs.isNotEmpty) {
+      final chat = ChatModel.fromMap(chatSnapshot.docs.first.data());
+      return chat.message;
+    } else {
+      return "No messages yet";
     }
   }
 
-  // Set user status to 'offline' when they log out or app goes background
-  Future<void> _setUserOffline(User? user) async {
-    if (user != null) {
-      await _firestore.collection('users').doc(user.uid).update({
-        'status': 'offline',
-      });
-    }
+  // Sign out function
+  Future<void> _signOut(BuildContext context) async {
+    await _auth.signOut();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    User? user = _auth.currentUser;
-
-    // Set the user online when the app is opened
-    _setUserOnline(user);
-
     return Scaffold(
       appBar: AppBar(
-        title: Text('Accueil'),
+        title: Text('Home'),
         actions: [
-          // Notification icon on the right
-          IconButton(
-            icon: Icon(Icons.notifications),
-            onPressed: () {
-              // Handle notifications action
-            },
-          ),
-          // Log out button
           IconButton(
             icon: Icon(Icons.exit_to_app),
-            onPressed: () => _signOut(context), // Call signOut on press
+            onPressed: () => _signOut(context),
           ),
         ],
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Image.asset('assets/logo.png', fit: BoxFit.cover), // Insert your logo here
-        ),
       ),
       body: Column(
         children: [
-          // Online users section
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Container(
@@ -81,16 +78,17 @@ Future<void> _signOut(BuildContext context) async {
                 children: [
                   Icon(Icons.people, color: Colors.blue),
                   SizedBox(width: 8),
-                  Text('Users', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('Users',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
           ),
-          // Fetch and display users dynamically excluding the current user
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: StreamBuilder<QuerySnapshot>(
-              stream: _firestore.collection('users').snapshots(), // Firestore stream
+              stream: _firestore.collection('users').snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return CircularProgressIndicator();
@@ -104,57 +102,66 @@ Future<void> _signOut(BuildContext context) async {
                   return Text('No users found.');
                 }
 
-                // List of users from Firestore
                 List<DocumentSnapshot> users = snapshot.data!.docs;
-
-                // Filter out the current user based on user ID
                 users = users.where((userDoc) {
                   var userData = userDoc.data() as Map<String, dynamic>;
-                  return userData['uid'] != user?.uid; // Exclude the current user
+                  return userData['uid'] != _auth.currentUser!.uid;
                 }).toList();
 
                 return SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: users.map((userDoc) {
-                      // Get user data
                       var userData = userDoc.data() as Map<String, dynamic>;
-                      String userName = userData['username'] ?? 'Unknown User'; // Username field
+                      String userName = userData['username'] ?? 'Unknown User';
                       String userAvatarUrl = userData['avatarUrl'] ?? '';
-                      String userStatus = userData['status'] ?? 'offline'; // User's status
+                      String userStatus = userData['status'] ?? 'offline';
 
-                      // Set the color of the online indicator (green for online, grey for offline)
-                      Color onlineStatusColor = userStatus == 'online' ? Colors.green : Colors.grey;
+                      Color onlineStatusColor =
+                          userStatus == 'online' ? Colors.green : Colors.grey;
 
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                        child: Column(
-                          children: [
-                            Stack(
-                              children: [
-                                CircleAvatar(
-                                  radius: 30,
-                                  backgroundImage: userAvatarUrl.isNotEmpty
-                                      ? NetworkImage(userAvatarUrl) as ImageProvider
-                                      : AssetImage('assets/default_avatar.png') as ImageProvider,
-                                ),
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: Container(
-                                    height: 10,
-                                    width: 10,
-                                    decoration: BoxDecoration(
-                                      color: onlineStatusColor,
-                                      shape: BoxShape.circle,
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatScreen(
+                                    userModel: UserModel.fromMap(userData)),
+                              ),
+                            );
+                          },
+                          child: Column(
+                            children: [
+                              Stack(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 30,
+                                    backgroundImage: userAvatarUrl.isNotEmpty
+                                        ? NetworkImage(userAvatarUrl)
+                                        : AssetImage(
+                                                'assets/default_avatar.png')
+                                            as ImageProvider,
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      height: 10,
+                                      width: 10,
+                                      decoration: BoxDecoration(
+                                        color: onlineStatusColor,
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 8),
-                            Text(userName, style: TextStyle(fontSize: 12)),
-                          ],
+                                ],
+                              ),
+                              SizedBox(height: 8),
+                              Text(userName, style: TextStyle(fontSize: 12)),
+                            ],
+                          ),
                         ),
                       );
                     }).toList(),
@@ -163,7 +170,6 @@ Future<void> _signOut(BuildContext context) async {
               },
             ),
           ),
-          // Chats section
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Container(
@@ -173,22 +179,76 @@ Future<void> _signOut(BuildContext context) async {
                 children: [
                   Icon(Icons.chat, color: Colors.blue),
                   SizedBox(width: 8),
-                  Text('Chats', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('Chats',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
           ),
-          // List of chats (for now just a placeholder)
           Expanded(
-            child: ListView.builder(
-              itemCount: 5, // Replace with dynamic count
-              itemBuilder: (context, index) {
-                return ListTile(
-                  leading: CircleAvatar(child: Icon(Icons.chat_bubble)),
-                  title: Text('Chat with User ${index + 1}'),
-                  subtitle: Text('Last message'),
-                  onTap: () {
-                    // Handle chat item tap
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _firestore
+                  .collection('chats')
+                  .where('senderId', isEqualTo: _auth.currentUser!.uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Text('Error: ${snapshot.error}');
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Text('No chats found.');
+                }
+
+                List<DocumentSnapshot> chatDocs = snapshot.data!.docs;
+                return ListView.builder(
+                  itemCount: chatDocs.length,
+                  itemBuilder: (context, index) {
+                    var chatData =
+                        chatDocs[index].data() as Map<String, dynamic>;
+                    String receiverId = chatData['receiverId'];
+                    return FutureBuilder<String>(
+                      future: _getLastMessage(receiverId),
+                      builder: (context, lastMessageSnapshot) {
+                        if (!lastMessageSnapshot.hasData) {
+                          return ListTile(
+                            leading:
+                                CircleAvatar(child: Icon(Icons.chat_bubble)),
+                            title: Text('Loading...'),
+                            subtitle: Text('Loading...'),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ChatScreen(
+                                      userModel: UserModel.fromMap(chatData)),
+                                ),
+                              );
+                            },
+                          );
+                        }
+
+                        return ListTile(
+                          leading: CircleAvatar(child: Icon(Icons.chat_bubble)),
+                          title: Text('Chat with ${receiverId}'),
+                          subtitle: Text(lastMessageSnapshot.data!),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatScreen(
+                                    userModel: UserModel.fromMap(chatData)),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    );
                   },
                 );
               },
