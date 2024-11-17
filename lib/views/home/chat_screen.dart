@@ -113,10 +113,37 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 233, 144, 26), // Deeper purple for AppBar
-        title: Text(
-          ' ${widget.userModel.username}',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        backgroundColor: Color.fromARGB(255, 233, 144, 26),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              ' ${widget.userModel.username}',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+            StreamBuilder<DocumentSnapshot>(
+              stream: _firestore
+                  .collection('typing_status')
+                  .doc(widget.userModel.uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data!.exists) {
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  if (data['isTyping'] == true) {
+                    return Text(
+                      'Typing...',
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        fontSize: 14,
+                        color: Colors.white70,
+                      ),
+                    );
+                  }
+                }
+                return SizedBox.shrink();
+              },
+            ),
+          ],
         ),
         elevation: 4.0,
       ),
@@ -148,19 +175,24 @@ class _ChatScreenState extends State<ChatScreen> {
                 _scrollToBottom();
 
                 return ListView.builder(
-                  controller: _scrollController, // Assign the controller here
+                  controller: _scrollController,
                   itemCount: chatDocs.length,
                   itemBuilder: (context, index) {
                     final chat = chatDocs[index];
                     final isMe = chat.senderId == _auth.currentUser!.uid;
 
                     return Align(
-                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment:
+                          isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
-                        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                        margin:
+                            EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        padding:
+                            EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                         decoration: BoxDecoration(
-                          color: isMe ? Color.fromARGB(255, 233, 144, 26) : Color.fromARGB(255, 233, 144, 26),
+                          color: isMe
+                              ? Color.fromARGB(255, 233, 144, 26)
+                              : Color.fromARGB(255, 233, 144, 26),
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
@@ -190,42 +222,6 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          StreamBuilder<DocumentSnapshot>(
-            stream: _firestore
-                .collection('typing_status')
-                .doc(widget.userModel.uid)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasData && snapshot.data!.exists) {
-                final data = snapshot.data!.data() as Map<String, dynamic>;
-                if (data['isTyping'] == true) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        padding:
-                            EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: Color.fromARGB(255, 233, 144, 26),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${widget.userModel.username} is typing...',
-                          style: TextStyle(
-                            fontStyle: FontStyle.italic,
-                            color: Colors.black87,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }
-              }
-              return SizedBox.shrink();
-            },
-          ),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -235,7 +231,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     controller: _messageController,
                     decoration: InputDecoration(
                       hintText: 'Type a message...',
-                      hintStyle: TextStyle(color: Color.fromARGB(255, 233, 144, 26)),
+                      hintStyle:
+                          TextStyle(color: Color.fromARGB(255, 233, 144, 26)),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
