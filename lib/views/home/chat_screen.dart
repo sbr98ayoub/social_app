@@ -24,6 +24,9 @@ class _ChatScreenState extends State<ChatScreen> {
   late Stream<QuerySnapshot> _chatStream;
   Timer? _typingTimer;
 
+  // Add a ScrollController to manage scrolling
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -97,6 +100,15 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  // Scroll to the bottom
+  void _scrollToBottom() {
+    Future.delayed(Duration(milliseconds: 300), () {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -132,7 +144,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   return ChatModel.fromMap(doc.data() as Map<String, dynamic>);
                 }).toList();
 
+                // Scroll to the bottom when new messages are added
+                _scrollToBottom();
+
                 return ListView.builder(
+                  controller: _scrollController, // Assign the controller here
                   itemCount: chatDocs.length,
                   itemBuilder: (context, index) {
                     final chat = chatDocs[index];
@@ -219,7 +235,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     controller: _messageController,
                     decoration: InputDecoration(
                       hintText: 'Type a message...',
-                      hintStyle: TextStyle(color:Color.fromARGB(255, 233, 144, 26)),
+                      hintStyle: TextStyle(color: Color.fromARGB(255, 233, 144, 26)),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
