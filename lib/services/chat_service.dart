@@ -33,15 +33,16 @@ class ChatService {
   Stream<List<ChatModel>> getChatMessages(String user1Id, String user2Id) {
     return _firestore
         .collection('chats')
-        .where('senderId', whereIn: [user1Id, user2Id])
-        .where('receiverId', whereIn: [user1Id, user2Id])
+        .where('participants', arrayContains: user1Id)
         .orderBy('timestamp', descending: false)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            return ChatModel.fromMap(doc.data() as Map<String, dynamic>);
-          }).toList();
-        });
+      return snapshot.docs.map((doc) {
+        return ChatModel.fromMap(doc.data() as Map<String, dynamic>);
+      }).where((chat) {
+        return chat.participants.contains(user2Id);
+      }).toList();
+    });
   }
 
   // Get the list of chats for a user

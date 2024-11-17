@@ -66,10 +66,6 @@ class _ChatScreenState extends State<ChatScreen> {
               child: StreamBuilder<QuerySnapshot>(
             stream: _firestore
                 .collection('chats')
-                .where('senderId',
-                    whereIn: [_auth.currentUser!.uid, widget.userModel.uid])
-                .where('receiverId',
-                    whereIn: [_auth.currentUser!.uid, widget.userModel.uid])
                 .orderBy('timestamp', descending: false)
                 .snapshots(),
             builder: (context, snapshot) {
@@ -81,7 +77,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 return Center(child: Text('No messages found.'));
               }
 
-              final chatDocs = snapshot.data!.docs.map((doc) {
+              final chatDocs = snapshot.data!.docs.where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                return (data['senderId'] == _auth.currentUser!.uid &&
+                        data['receiverId'] == widget.userModel.uid) ||
+                    (data['senderId'] == widget.userModel.uid &&
+                        data['receiverId'] == _auth.currentUser!.uid);
+              }).map((doc) {
                 return ChatModel.fromMap(doc.data() as Map<String, dynamic>);
               }).toList();
 
