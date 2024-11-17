@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'login_screen.dart';
+import 'package:social_app/views/auth/login_screen.dart';
+import '../auth/login_screen.dart'; // Import the LoginScreen
 
 class SignupScreen extends StatefulWidget {
   @override
@@ -12,209 +12,154 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
 
-  bool _isLoading = false; // Loading state
-
   Future<void> _signup() async {
-    if (_usernameController.text.isEmpty ||
-        _emailController.text.isEmpty ||
-        _phoneController.text.isEmpty ||
-        _passwordController.text.isEmpty) {
-      Fluttertoast.showToast(
-        msg: "Tous les champs doivent être remplis",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.orange,
-        textColor: Colors.white,
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true; // Start loading indicator
-    });
-
     try {
-      // Log form values before Firebase call
-      print("Username: ${_usernameController.text}");
-      print("Email: ${_emailController.text}");
-      print("Phone: ${_phoneController.text}");
-      print("Password: ${_passwordController.text}");
-
-      // Firebase Authentication to create a user
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      UserCredential userCredential =
+          await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
       final User? user = userCredential.user;
       if (user != null) {
-        // Log user information
-        print("User created: ${user.uid}");
-
-        // Add user data to Firestore (including the 'status' field)
         await _firestore.collection('users').doc(user.uid).set({
           'username': _usernameController.text.trim(),
           'email': _emailController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'uid': user.uid,
-          'status': 'offline',  // Add default status field here
         });
 
-        Fluttertoast.showToast(
-          msg: "Inscription réussie ! Vous pouvez vous connecter maintenant.",
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Colors.green,
-          textColor: Colors.white,
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LoginScreen()),
         );
-
-        // Navigate to login screen
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => LoginScreen()),
-          );
-        }
       }
     } catch (e) {
-      // Log the error
-      print("Error during signup: ${e.toString()}");
-
-      Fluttertoast.showToast(
-        msg: "Erreur lors de l'inscription : ${e.toString()}",
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-    } finally {
-      setState(() {
-        _isLoading = false; // Stop loading indicator
-      });
+      print(e);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          _buildSignupForm(),
-          if (_isLoading) _buildLoadingOverlay(), // Full-screen loading overlay
-        ],
-      ),
-    );
-  }
-
-  // Signup form UI
-  Widget _buildSignupForm() {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.blueAccent.withOpacity(0.1),
-              child: Icon(
-                Icons.person_add_alt_1,
-                size: 60,
-                color: Colors.blueAccent,
-              ),
-            ),
-            SizedBox(height: 20),
-            Text(
-              'Inscription',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.blueAccent,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Créez votre compte pour vous connecter avec vos amis !',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[700], fontSize: 16),
-            ),
-            SizedBox(height: 30),
-            _buildTextField(_usernameController, 'Nom d\'utilisateur', Icons.person),
-            SizedBox(height: 15),
-            _buildTextField(_emailController, 'Email', Icons.email),
-            SizedBox(height: 15),
-            _buildTextField(_phoneController, 'Numéro de téléphone', Icons.phone),
-            SizedBox(height: 15),
-            _buildTextField(_passwordController, 'Mot de passe', Icons.lock, isPassword: true),
-            SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _signup, // Disable button when loading
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 15),
-                backgroundColor: Colors.blueAccent, // Updated parameter name
-                foregroundColor: Colors.white, // Text color
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 30),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/fireLogo.jpg',
+                  height: 120,
+                  width: 120,
                 ),
-              ),
-              child: Text(
-                'S\'inscrire',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+                SizedBox(height: 40),
+                Text(
+                  'Create Account',
+                  style: TextStyle(
+                    fontSize: 30,
+                    color: Colors.orangeAccent,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 20),
+                _buildTextField(
+                  controller: _usernameController,
+                  label: 'Username',
+                  obscureText: false,
+                ),
+                SizedBox(height: 20),
+                _buildTextField(
+                  controller: _emailController,
+                  label: 'Email',
+                  obscureText: false,
+                ),
+                SizedBox(height: 20),
+                _buildTextField(
+                  controller: _passwordController,
+                  label: 'Password',
+                  obscureText: true,
+                ),
+                SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: _signup,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    padding: EdgeInsets.symmetric(vertical: 15, horizontal: 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 5,
+                  ),
+                  child: Text(
+                    'Sign Up',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Already have an account? ',
+                      style: TextStyle(color: Colors.black),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => LoginScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Login',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            SizedBox(height: 20),
-            TextButton(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
-                );
-              },
-              child: Text(
-                "Déjà inscrit ? Se connecter ici",
-                style: TextStyle(color: Colors.blueAccent, fontSize: 16),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  // Loading overlay UI
-  Widget _buildLoadingOverlay() {
-    return Container(
-      color: Colors.black54,
-      child: Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
-        ),
-      ),
-    );
-  }
-
-  // TextField helper widget
-  Widget _buildTextField(TextEditingController controller, String hint, IconData icon, {bool isPassword = false}) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required bool obscureText,
+  }) {
     return TextField(
       controller: controller,
-      obscureText: isPassword,
+      style: TextStyle(color: Colors.black),
       decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: Icon(icon, color: Colors.blueAccent),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.orangeAccent),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.orangeAccent),
         ),
-        hintStyle: TextStyle(color: Colors.grey[500]),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.orange),
+        ),
+        filled: true,
+        fillColor: Colors.orange[50],
       ),
+      obscureText: obscureText,
     );
   }
 }
