@@ -101,7 +101,12 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chat with ${widget.userModel.username}'),
+        backgroundColor: Color.fromARGB(255, 233, 144, 26), // Deeper purple for AppBar
+        title: Text(
+          ' ${widget.userModel.username}',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+        elevation: 4.0,
       ),
       body: Column(
         children: [
@@ -134,20 +139,32 @@ class _ChatScreenState extends State<ChatScreen> {
                     final isMe = chat.senderId == _auth.currentUser!.uid;
 
                     return Align(
-                      alignment:
-                          isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
-                        margin:
-                            EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                        padding: EdgeInsets.all(10),
+                        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                         decoration: BoxDecoration(
-                          color: isMe ? Colors.blue : Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(10),
+                          color: isMe ? Color.fromARGB(255, 233, 144, 26) : Color.fromARGB(255, 233, 144, 26),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              spreadRadius: 1,
+                              blurRadius: 5,
+                            ),
+                          ],
+                          gradient: isMe
+                              ? LinearGradient(
+                                  colors: [Colors.blue.shade400, Colors.blue],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight)
+                              : null,
                         ),
                         child: Text(
                           chat.message,
                           style: TextStyle(
-                            color: isMe ? Colors.white : Colors.black,
+                            color: isMe ? Colors.white : Colors.black87,
+                            fontSize: 16,
                           ),
                         ),
                       ),
@@ -167,21 +184,22 @@ class _ChatScreenState extends State<ChatScreen> {
                 final data = snapshot.data!.data() as Map<String, dynamic>;
                 if (data['isTyping'] == true) {
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Container(
                         padding:
-                            EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                            EdgeInsets.symmetric(vertical: 6, horizontal: 12),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(10),
+                          color: Color.fromARGB(255, 233, 144, 26),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '${widget.userModel.username} is typing...',
                           style: TextStyle(
                             fontStyle: FontStyle.italic,
                             color: Colors.black87,
+                            fontSize: 14,
                           ),
                         ),
                       ),
@@ -193,13 +211,22 @@ class _ChatScreenState extends State<ChatScreen> {
             },
           ),
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _messageController,
-                    decoration: InputDecoration(hintText: 'Type a message...'),
+                    decoration: InputDecoration(
+                      hintText: 'Type a message...',
+                      hintStyle: TextStyle(color:Color.fromARGB(255, 233, 144, 26)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade200,
+                    ),
                     onChanged: (text) {
                       setState(() {
                         _isTyping = text.trim().isNotEmpty;
@@ -208,9 +235,13 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
                 ),
+                SizedBox(width: 12),
                 IconButton(
-                  icon: Icon(Icons.send),
+                  icon: Icon(Icons.send, color: Colors.white),
                   onPressed: _sendMessage,
+                  padding: EdgeInsets.all(0),
+                  splashRadius: 20,
+                  iconSize: 30,
                 ),
               ],
             ),
