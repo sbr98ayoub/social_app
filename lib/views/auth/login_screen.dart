@@ -8,10 +8,39 @@ class LoginScreen extends StatefulWidget {
   _LoginScreenState createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _auth = FirebaseAuth.instance;
+
+  late AnimationController _animationController;
+  late Animation<double> _logoAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Initialize the AnimationController and Animation
+    _animationController = AnimationController(
+      duration: Duration(seconds: 2), // Duration of each cycle
+      vsync: this, // It uses the current state as a ticker
+    )..repeat(reverse: true); // Repeat the animation in reverse direction after completing
+
+    // Create the animation with a Tween for vertical movement
+    _logoAnimation = Tween<double>(begin: -30, end: 30).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut, // Smooth easing for up and down motion
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    // Dispose of the controller when the screen is disposed
+    _animationController.dispose();
+    super.dispose();
+  }
 
   Future<void> _login() async {
     try {
@@ -31,90 +60,113 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Set the background to a gradient similar to fire colors
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 30),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Add the fire logo (keeping it as it is in your app)
-                Image.asset(
-                  'assets/fireLogo.jpg', // Path to your logo image
-                  height: 120,
-                  width: 120,
-                ),
-                SizedBox(height: 40),
-                Text(
-                  'Welcome Back!',
-                  style: TextStyle(
-                    fontSize: 30,
-                    color: Colors.orangeAccent, // Change color to fiery orange
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: 20),
-                _buildTextField(
-                  controller: _emailController,
-                  label: 'Email',
-                  obscureText: false,
-                ),
-                SizedBox(height: 20),
-                _buildTextField(
-                  controller: _passwordController,
-                  label: 'Password',
-                  obscureText: true,
-                ),
-                SizedBox(height: 30),
-                ElevatedButton(
-                  onPressed: _login,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange, // Match the fiery color
-                    padding: EdgeInsets.symmetric(vertical: 15, horizontal: 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+      body: Container(
+        // Gradient background with a bit of black on the left
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.black.withOpacity(0.7), // Slightly transparent black
+              Color(0xFF044F48),            // Original gradient color
+              Color(0xFF2A7561)             // Gradient endpoint
+            ],
+            stops: [0.0, 0.3, 1.0],          // Control the gradient transition
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: 30),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Bouncing logo
+                  AnimatedBuilder(
+                    animation: _logoAnimation,
+                    builder: (context, child) {
+                      return Transform.translate(
+                        offset: Offset(0, _logoAnimation.value),
+                        child: child,
+                      );
+                    },
+                    child: Image.asset(
+                      'assets/logo1.png', // Replace with your logo path
+                      height: 120,
+                      width: 120,
                     ),
-                    elevation: 5, // Add a subtle shadow for better visibility
                   ),
-                  child: Text(
-                    'Login',
+                  SizedBox(height: 40),
+                  Text(
+                    'Welcome Back!',
                     style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 30,
+                      color: Colors.white, // White text for good contrast
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-                SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Don\'t have an account? ',
-                      style: TextStyle(color: Colors.black),
+                  SizedBox(height: 20),
+                  _buildTextField(
+                    controller: _emailController,
+                    label: 'Email',
+                    obscureText: false,
+                  ),
+                  SizedBox(height: 20),
+                  _buildTextField(
+                    controller: _passwordController,
+                    label: 'Password',
+                    obscureText: true,
+                  ),
+                  SizedBox(height: 30),
+                  ElevatedButton(
+                    onPressed: _login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal, // Button matches the theme
+                      padding:
+                          EdgeInsets.symmetric(vertical: 15, horizontal: 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      elevation: 5,
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SignupScreen(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'Sign Up',
-                        style: TextStyle(
-                          color: Colors.orange, // Match the button color
-                          fontWeight: FontWeight.bold,
-                        ),
+                    child: Text(
+                      'Login',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.white, // White text for good visibility
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Don\'t have an account? ',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SignupScreen(),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'Sign Up',
+                          style: TextStyle(
+                            color: Colors.tealAccent, // Accent color
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -129,22 +181,18 @@ class _LoginScreenState extends State<LoginScreen> {
   }) {
     return TextField(
       controller: controller,
-      style: TextStyle(color: Colors.black),
+      style: TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle:
-            TextStyle(color: Colors.orangeAccent), // Match label color to theme
+        labelStyle: TextStyle(color: Colors.tealAccent),
         enabledBorder: OutlineInputBorder(
-          borderSide:
-              BorderSide(color: Colors.orangeAccent), // Fiery border color
+          borderSide: BorderSide(color: Colors.tealAccent),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(
-              color: Colors.orange), // Focused border with brighter orange
+          borderSide: BorderSide(color: Colors.tealAccent.shade200),
         ),
         filled: true,
-        fillColor:
-            Colors.orange[50], // Light orange background to match the theme
+        fillColor: Colors.white.withOpacity(0.1), // Semi-transparent white
       ),
       obscureText: obscureText,
     );
