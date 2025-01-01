@@ -20,10 +20,10 @@ class _ChatScreenState extends State<ChatScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _isTyping = false;
+  String? _pinnedMessage;
   late Stream<QuerySnapshot> _chatStream;
   Timer? _typingTimer;
 
-  // Add a ScrollController to manage scrolling
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -31,7 +31,6 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     _markMessagesAsRead();
 
-    // Initialize chat stream
     _chatStream = _firestore
         .collection('chats')
         .orderBy('timestamp', descending: false)
@@ -69,7 +68,6 @@ class _ChatScreenState extends State<ChatScreen> {
       _isTyping = false;
     });
 
-    // Update typing status to false
     _firestore
         .collection('typing_status')
         .doc(_auth.currentUser!.uid)
@@ -99,7 +97,102 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // Scroll to the bottom
+  void _showMessageOptions(BuildContext context, String messageId,
+      String message, bool isEdited, bool isMe) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Wrap(
+          children: [
+            // Delete option should be available for all users
+            ListTile(
+              leading: Icon(Icons.delete, color: Colors.red),
+              title: Text('Delete'),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteMessage(messageId);
+              },
+            ),
+            // Edit option only for the message sender
+            if (isMe)
+              ListTile(
+                leading: Icon(Icons.edit, color: Colors.blue),
+                title: Text('Edit'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _editMessage(context, messageId, message);
+                },
+              ),
+            // Pin option should be available for all users
+            ListTile(
+              leading: Icon(Icons.push_pin, color: Colors.orange),
+              title: Text('Pin'),
+              onTap: () {
+                Navigator.pop(context);
+                _pinMessage(message);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteMessage(String messageId) async {
+    try {
+      await _firestore.collection('chats').doc(messageId).update({
+        'message': 'This message was deleted',
+        'isDeleted': true,
+      });
+    } catch (e) {
+      print('Error deleting message: $e');
+    }
+  }
+
+  void _editMessage(BuildContext context, String messageId, String oldMessage) {
+    TextEditingController _editController =
+        TextEditingController(text: oldMessage);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Edit Message'),
+          content: TextField(
+            controller: _editController,
+            decoration: InputDecoration(
+              hintText: 'Enter new message',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _firestore.collection('chats').doc(messageId).update({
+                  'message': _editController.text.trim(),
+                  'isEdited': true,
+                });
+                Navigator.pop(context);
+              },
+              child: Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _pinMessage(String message) {
+    setState(() {
+      _pinnedMessage = message;
+    });
+  }
+
   void _scrollToBottom() {
     Future.delayed(Duration(milliseconds: 300), () {
       if (_scrollController.hasClients) {
@@ -140,22 +233,26 @@ class _ChatScreenState extends State<ChatScreen> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  StreamBuilder<DocumentSnapshot>(
-                    stream: _firestore
-                        .collection('typing_status')
-                        .doc(widget.userModel.uid)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData && snapshot.data!.exists) {
-                        final data =
-                            snapshot.data!.data() as Map<String, dynamic>;
-                        if (data['isTyping'] == true) {
-                          return AnimatedDots(); // Animated dots widget
-                        }
-                      }
-                      return SizedBox.shrink();
-                    },
-                  ),
+                  if (_pinnedMessage != null)
+                    Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.push_pin, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _pinnedMessage!,
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -176,15 +273,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     );
                   }
 
-                  final chatDocs = snapshot.data!.docs.where((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    return (data['senderId'] == _auth.currentUser!.uid &&
-                            data['receiverId'] == widget.userModel.uid) ||
-                        (data['senderId'] == widget.userModel.uid &&
-                            data['receiverId'] == _auth.currentUser!.uid);
-                  }).map((doc) {
-                    return ChatModel.fromMap(
-                        doc.data() as Map<String, dynamic>);
+                  final chatDocs = snapshot.data!.docs.map((doc) {
+                    return {
+                      'id': doc.id,
+                      ...doc.data() as Map<String, dynamic>
+                    };
                   }).toList();
 
                   _scrollToBottom();
@@ -194,25 +287,54 @@ class _ChatScreenState extends State<ChatScreen> {
                     itemCount: chatDocs.length,
                     itemBuilder: (context, index) {
                       final chat = chatDocs[index];
-                      final isMe = chat.senderId == _auth.currentUser!.uid;
+                      final isMe = chat['senderId'] == _auth.currentUser!.uid;
+                      final isDeleted = chat['isDeleted'] ?? false;
+                      final isEdited = chat['isEdited'] ?? false;
 
                       return Align(
                         alignment:
                             isMe ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          margin:
-                              EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                          padding: EdgeInsets.symmetric(
-                              vertical: 10, horizontal: 14),
-                          decoration: BoxDecoration(
-                            color: isMe ? Colors.teal : Colors.grey.shade800,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            chat.message,
-                            style: TextStyle(
-                              color: isMe ? Colors.white : Colors.white70,
-                              fontSize: 16,
+                        child: GestureDetector(
+                          onLongPress: () => _showMessageOptions(context,
+                              chat['id'], chat['message'], isEdited, isMe),
+                          child: Container(
+                            margin: EdgeInsets.symmetric(
+                                vertical: 8, horizontal: 12),
+                            padding: EdgeInsets.symmetric(
+                                vertical: 10, horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: isMe ? Colors.teal : Colors.grey.shade800,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isDeleted
+                                      ? 'This message was deleted'
+                                      : chat['message'],
+                                  style: TextStyle(
+                                    color: isDeleted
+                                        ? Colors.red.shade300
+                                        : (isMe
+                                            ? Colors.white
+                                            : Colors.white70),
+                                    fontSize: 16,
+                                    fontStyle: isDeleted
+                                        ? FontStyle.italic
+                                        : FontStyle.normal,
+                                  ),
+                                ),
+                                if (isEdited && !isDeleted)
+                                  Text(
+                                    '(edited)',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade400,
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
@@ -263,65 +385,5 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
-  }
-}
-
-class AnimatedDots extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Dot(),
-        SizedBox(width: 4),
-        Dot(),
-        SizedBox(width: 4),
-        Dot(),
-      ],
-    );
-  }
-}
-
-class Dot extends StatefulWidget {
-  @override
-  _DotState createState() => _DotState();
-}
-
-class _DotState extends State<Dot> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: Duration(milliseconds: 600),
-      vsync: this,
-    )..repeat(reverse: true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: 1 + _controller.value,
-          child: Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: Colors.tealAccent,
-              shape: BoxShape.circle,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 }

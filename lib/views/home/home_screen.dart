@@ -17,12 +17,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String? _username;
   String _searchQuery = "";
   bool _hasSeenWelcomeCard = false; // Track if user has seen the welcome card
+  List<String> _notifications = []; // List of notifications
 
   @override
   void initState() {
     super.initState();
     _fetchUsername();
     _setUserStatus('online');
+    _loadNotifications();
   }
 
   Future<void> _fetchUsername() async {
@@ -34,6 +36,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         _username = userDoc.get('username') ?? 'User';
       });
     }
+  }
+
+  Future<void> _loadNotifications() async {
+    // Simulate loading notifications from Firestore
+    _notifications = [
+      'New message from John Doe.',
+      'Your profile was viewed by Jane.',
+      'A new comment was posted on your photo.',
+    ];
   }
 
   @override
@@ -87,27 +98,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   child: Card(
                     color: Colors.tealAccent.withOpacity(0.7),
                     margin: EdgeInsets.symmetric(vertical: 20, horizontal: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    elevation: 5,
                     child: Padding(
-                      padding: const EdgeInsets.all(15.0),
+                      padding: const EdgeInsets.all(12.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Hello ${_username ?? "User"}!',
                             style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
-                          SizedBox(height: 10),
+                          SizedBox(height: 8),
                           Text(
                             'Welcome to our community. If you have any questions or need help, feel free to reach out. The society community is here to work with you!',
                             style: TextStyle(
                               color: Colors.white,
+                              fontSize: 14,
                             ),
                           ),
-                          SizedBox(height: 10),
+                          SizedBox(height: 12),
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
@@ -117,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                 });
                               },
                               child: Text(
-                                'Remove',
+                                'Dismiss',
                                 style: TextStyle(color: Colors.white),
                               ),
                             ),
@@ -188,6 +204,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               _showSearchDialog();
             },
           ),
+           IconButton(
+            icon: Icon(Icons.notifications),
+            onPressed: () => _showNotifications(context),
+          ),
           IconButton(
             icon: Icon(Icons.account_circle),
             onPressed: () {
@@ -201,6 +221,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             icon: Icon(Icons.exit_to_app),
             onPressed: () => _signOut(context),
           ),
+          // Notification Icon with Dropdown
         ],
       ),
     );
@@ -279,6 +300,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: Text('Close', style: TextStyle(color: Colors.tealAccent)),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _showNotifications(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          color: Colors.black.withOpacity(0.7),
+          child: ListView.builder(
+            itemCount: _notifications.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                title: Text(
+                  _notifications[index],
+                  style: TextStyle(color: Colors.tealAccent),
+                ),
+              );
+            },
+          ),
         );
       },
     );

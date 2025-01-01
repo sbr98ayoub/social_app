@@ -51,4 +51,21 @@ class ChatService {
       throw Exception("Error updating message status: $e");
     }
   }
+
+  Future<void> deleteMessage(String messageId) async {
+    try {
+      await _firestore.collection('chats').doc(messageId).update({
+        'message': 'This message was deleted',
+        'isDeleted': true,
+      });
+    } catch (e) {
+      throw Exception('Failed to delete message: $e');
+    }
+  }
+
+  Future<void> updateMessage(String messageId, String newMessage) async {
+    await _firestore.collection('chats').doc(messageId).update({
+      'message': newMessage,
+    });
+  }
 }
