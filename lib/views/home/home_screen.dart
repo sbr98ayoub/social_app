@@ -11,11 +11,12 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   final _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String? _username;
   String _searchQuery = "";
+  bool _hasSeenWelcomeCard = false; // Track if user has seen the welcome card
 
   @override
   void initState() {
@@ -63,14 +64,121 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final currentUser = _auth.currentUser;
     return Scaffold(
-      backgroundColor: Colors.white, // White background for the full page
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.black.withOpacity(0.7),
+              Color(0xFF044F48),
+              Color(0xFF2A7561),
+            ],
+            stops: [0.0, 0.3, 1.0],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Display the welcome card only if it hasn't been seen yet
+              if (!_hasSeenWelcomeCard)
+                Padding(
+                  padding: const EdgeInsets.all(10.0),
+                  child: Card(
+                    color: Colors.tealAccent.withOpacity(0.7),
+                    margin: EdgeInsets.symmetric(vertical: 20, horizontal: 15),
+                    child: Padding(
+                      padding: const EdgeInsets.all(15.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Hello ${_username ?? "User"}!',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            'Welcome to our community. If you have any questions or need help, feel free to reach out. The society community is here to work with you!',
+                            style: TextStyle(
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _hasSeenWelcomeCard = true; // Mark the card as seen
+                                });
+                              },
+                              child: Text(
+                                'Remove',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              SizedBox(height: 20),
+              Text(
+                'Welcome, ${_username ?? "User"}!',
+                style: TextStyle(
+                  fontSize: 28,
+                  color: Colors.tealAccent,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: 20),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: _firestore
+                      .collection('users')
+                      .where('uid', isNotEqualTo: currentUser?.uid)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    }
+
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return Center(child: Text('No users found.'));
+                    }
+
+                    var filteredUsers = snapshot.data!.docs.where((userDoc) {
+                      var userData = userDoc.data() as Map<String, dynamic>;
+                      return userData['username']
+                          .toLowerCase()
+                          .contains(_searchQuery.toLowerCase());
+                    }).toList();
+
+                    return ListView(
+                      children: filteredUsers.map((userDoc) {
+                        var userData = userDoc.data() as Map<String, dynamic>;
+                        return _buildUserTile(userData);
+                      }).toList(),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent, // Transparent background
-        elevation: 0, // No shadow
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         title: Image.asset(
-          'assets/fireLogo.jpg',
-          height: 50,
+          'assets/logo1.png',
+          height: 40,
         ),
         centerTitle: true,
         actions: [
@@ -81,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           IconButton(
-            icon: Icon(Icons.account_circle), // Account icon
+            icon: Icon(Icons.account_circle),
             onPressed: () {
               Navigator.push(
                 context,
@@ -95,67 +203,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20.0),
-            child: Center(
-              child: Text(
-                'Welcome, ${_username ?? "User"}!',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orangeAccent,
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _firestore
-                  .collection('users')
-                  .where('uid', isNotEqualTo: currentUser?.uid)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(child: Text('No users found.'));
-                }
-
-                var filteredUsers = snapshot.data!.docs.where((userDoc) {
-                  var userData = userDoc.data() as Map<String, dynamic>;
-                  return userData['username']
-                      .toLowerCase()
-                      .contains(_searchQuery.toLowerCase());
-                }).toList();
-
-                return ListView(
-                  children: filteredUsers.map((userDoc) {
-                    var userData = userDoc.data() as Map<String, dynamic>;
-                    return _buildUserTile(userData);
-                  }).toList(),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
     );
   }
 
   Widget _buildUserTile(Map<String, dynamic> userData) {
     return Card(
       margin: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+      color: Colors.black.withOpacity(0.6),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundImage:
-              userData['avatarUrl'] != null && userData['avatarUrl'].isNotEmpty
-                  ? NetworkImage(userData['avatarUrl'])
-                  : AssetImage('assets/default_avatar.png') as ImageProvider,
+          backgroundImage: userData['avatarUrl'] != null && userData['avatarUrl'].isNotEmpty
+              ? NetworkImage(userData['avatarUrl'])
+              : AssetImage('assets/default_avatar.png') as ImageProvider,
           radius: 25,
         ),
         title: Text(
@@ -163,6 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
+            color: Colors.tealAccent,
           ),
         ),
         subtitle: Row(
@@ -175,7 +235,10 @@ class _HomeScreenState extends State<HomeScreen> {
               size: 12,
             ),
             SizedBox(width: 5),
-            Text(userData['status'] ?? 'offline'),
+            Text(
+              userData['status'] ?? 'offline',
+              style: TextStyle(color: Colors.tealAccent),
+            ),
           ],
         ),
         onTap: () {
@@ -196,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Search for a User'),
+          title: Text('Search for a User', style: TextStyle(color: Colors.tealAccent)),
           content: TextField(
             onChanged: (value) {
               setState(() {
@@ -205,6 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             decoration: InputDecoration(
               hintText: 'Enter username',
+              hintStyle: TextStyle(color: Colors.tealAccent),
             ),
           ),
           actions: [
@@ -212,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: Text('Close'),
+              child: Text('Close', style: TextStyle(color: Colors.tealAccent)),
             ),
           ],
         );
