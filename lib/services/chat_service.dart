@@ -14,35 +14,21 @@ class ChatService {
   }
 
   // Get chat messages between two users
-  Stream<List<ChatModel>> getMessages(String senderId, String receiverId) {
+  Stream<List<ChatModel>> getMessages(String user1Id, String user2Id) {
     return _firestore
         .collection('chats')
-        .where('senderId', isEqualTo: senderId)
-        .where('receiverId', isEqualTo: receiverId)
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      // Ensure no null ChatModel is returned
-      return snapshot.docs
-          .map((doc) => ChatModel.fromMap(doc.data()))
-          .where((chatModel) => chatModel != null)
-          .toList() as List<ChatModel>;
-    });
-  }
-
-  Stream<List<ChatModel>> getChatMessages(String user1Id, String user2Id) {
-    return _firestore
-        .collection('chats')
-        .where('participants', arrayContains: user1Id)
+        .where('senderId', whereIn: [user1Id, user2Id])
+        .where('receiverId', whereIn: [user1Id, user2Id])
         .orderBy('timestamp', descending: false)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return ChatModel.fromMap(doc.data() as Map<String, dynamic>);
-      }).where((chat) {
-        return chat.participants.contains(user2Id);
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            return ChatModel.fromMap(doc.data() as Map<String, dynamic>);
+          }).where((chat) {
+            return (chat.senderId == user1Id && chat.receiverId == user2Id) ||
+                (chat.senderId == user2Id && chat.receiverId == user1Id);
+          }).toList();
+        });
   }
 
   // Get the list of chats for a user
