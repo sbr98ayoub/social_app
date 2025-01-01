@@ -4,13 +4,14 @@ class UserModel {
   final String email;
   final String phone;
   final String status; // to track if the user is online or offline
-
+  final String avatarUrl;
   UserModel({
     required this.uid,
     required this.username,
     required this.email,
     required this.phone,
     required this.status,
+    required this.avatarUrl,
   });
 
   Map<String, dynamic> toMap() {
@@ -20,6 +21,7 @@ class UserModel {
       'email': email,
       'phone': phone,
       'status': status, // Add the status for online/offline
+      'avatarUrl': avatarUrl,
     };
   }
 
@@ -29,7 +31,8 @@ class UserModel {
       username: map['username'] ?? '',
       email: map['email'] ?? '',
       phone: map['phone'] ?? '',
-      status: map['status'] ?? 'offline', // Default status is offline
+      status: map['status'] ?? 'offline',
+      avatarUrl: map['avatarUrl'] ?? '', // Default status is offline
     );
   }
 }

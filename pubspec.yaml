@@ -35,6 +35,8 @@ dependencies:
   firebase_core: ^3.7.0
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.3.0
+  firebase_storage: ^12.3.5
+  image_picker: ^0.8.7
   # add this line to your dependencies
   fluttertoast: ^8.2.8
 

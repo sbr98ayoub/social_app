@@ -26,11 +26,21 @@ class _SignupScreenState extends State<SignupScreen> {
 
       final User? user = userCredential.user;
       if (user != null) {
+        // Default profile picture URL
+        String defaultAvatarUrl =
+            'https://sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png';
+
+        // Save user details to Firestore
         await _firestore.collection('users').doc(user.uid).set({
+          'uid': user.uid,
           'username': _usernameController.text.trim(),
           'email': _emailController.text.trim(),
+          'phone': '', // Default empty phone number
+          'status': 'offline', // Default status
+          'avatarUrl': defaultAvatarUrl, // Set default profile picture
         });
 
+        // Navigate to login screen
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => LoginScreen()),
@@ -38,6 +48,9 @@ class _SignupScreenState extends State<SignupScreen> {
       }
     } catch (e) {
       print(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: ${e.toString()}")),
+      );
     }
   }
 

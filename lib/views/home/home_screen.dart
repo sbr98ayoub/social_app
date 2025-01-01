@@ -6,7 +6,6 @@ import '../auth/login_screen.dart';
 import 'package:social_app/models/user_model.dart';
 import 'package:social_app/views/home/AccountInfoScreen.dart';
 
-
 class HomeScreen extends StatefulWidget {
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -65,38 +64,37 @@ class _HomeScreenState extends State<HomeScreen> {
     final currentUser = _auth.currentUser;
     return Scaffold(
       backgroundColor: Colors.white, // White background for the full page
-     appBar: AppBar(
-  automaticallyImplyLeading: false,
-  backgroundColor: Colors.transparent, // Transparent background
-  elevation: 0, // No shadow
-  title: Image.asset(
-    'assets/fireLogo.jpg',
-    height: 50,
-  ),
-  centerTitle: true,
- actions: [
-  IconButton(
-    icon: Icon(Icons.search),
-    onPressed: () {
-      _showSearchDialog();
-    },
-  ),
-  IconButton(
-    icon: Icon(Icons.account_circle), // Account icon
-    onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => AccountInfoScreen()),
-      );
-    },
-  ),
-  IconButton(
-    icon: Icon(Icons.exit_to_app),
-    onPressed: () => _signOut(context),
-  ),
-],
-
-),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent, // Transparent background
+        elevation: 0, // No shadow
+        title: Image.asset(
+          'assets/fireLogo.jpg',
+          height: 50,
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () {
+              _showSearchDialog();
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.account_circle), // Account icon
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AccountInfoScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.exit_to_app),
+            onPressed: () => _signOut(context),
+          ),
+        ],
+      ),
 
       body: Column(
         children: [
@@ -154,7 +152,10 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundImage: NetworkImage(userData['avatarUrl'] ?? ''),
+          backgroundImage:
+              userData['avatarUrl'] != null && userData['avatarUrl'].isNotEmpty
+                  ? NetworkImage(userData['avatarUrl'])
+                  : AssetImage('assets/default_avatar.png') as ImageProvider,
           radius: 25,
         ),
         title: Text(

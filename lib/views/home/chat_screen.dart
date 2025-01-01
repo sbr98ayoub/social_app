@@ -24,15 +24,12 @@ class _ChatScreenState extends State<ChatScreen> {
   late Stream<QuerySnapshot> _chatStream;
   Timer? _typingTimer;
 
-  // Add a ScrollController to manage scrolling
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _markMessagesAsRead();
-
-    // Initialize chat stream
     _chatStream = _firestore
         .collection('chats')
         .orderBy('timestamp', descending: false)
@@ -70,7 +67,6 @@ class _ChatScreenState extends State<ChatScreen> {
       _isTyping = false;
     });
 
-    // Update typing status to false
     _firestore
         .collection('typing_status')
         .doc(_auth.currentUser!.uid)
@@ -100,7 +96,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // Scroll to the bottom
   void _scrollToBottom() {
     Future.delayed(Duration(milliseconds: 300), () {
       if (_scrollController.hasClients) {
@@ -113,39 +108,52 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 233, 144, 26),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        backgroundColor: Colors.black,
+        title: Row(
           children: [
-            Text(
-              ' ${widget.userModel.username}',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            CircleAvatar(
+              backgroundColor: Colors.grey.shade300,
+              child: Text(
+                widget.userModel.username[0].toUpperCase(),
+                style: TextStyle(color: Colors.black, fontSize: 20),
+              ),
             ),
-            StreamBuilder<DocumentSnapshot>(
-              stream: _firestore
-                  .collection('typing_status')
-                  .doc(widget.userModel.uid)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data!.exists) {
-                  final data = snapshot.data!.data() as Map<String, dynamic>;
-                  if (data['isTyping'] == true) {
-                    return Text(
-                      'Typing...',
-                      style: TextStyle(
-                        fontStyle: FontStyle.italic,
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
-                    );
-                  }
-                }
-                return SizedBox.shrink();
-              },
+            SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.userModel.username,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                StreamBuilder<DocumentSnapshot>(
+                  stream: _firestore
+                      .collection('typing_status')
+                      .doc(widget.userModel.uid)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData && snapshot.data!.exists) {
+                      final data =
+                          snapshot.data!.data() as Map<String, dynamic>;
+                      if (data['isTyping'] == true) {
+                        return Text(
+                          'Typing...',
+                          style: TextStyle(
+                            fontStyle: FontStyle.italic,
+                            fontSize: 14,
+                            color: Colors.grey.shade400,
+                          ),
+                        );
+                      }
+                    }
+                    return SizedBox.shrink();
+                  },
+                ),
+              ],
             ),
           ],
         ),
-        elevation: 4.0,
+        elevation: 0,
       ),
       body: Column(
         children: [
@@ -171,7 +179,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   return ChatModel.fromMap(doc.data() as Map<String, dynamic>);
                 }).toList();
 
-                // Scroll to the bottom when new messages are added
                 _scrollToBottom();
 
                 return ListView.builder(
@@ -191,8 +198,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                         decoration: BoxDecoration(
                           color: isMe
-                              ? Color.fromARGB(255, 233, 144, 26)
-                              : Color.fromARGB(255, 233, 144, 26),
+                              ? Colors.blue.shade700
+                              : Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
@@ -201,12 +208,6 @@ class _ChatScreenState extends State<ChatScreen> {
                               blurRadius: 5,
                             ),
                           ],
-                          gradient: isMe
-                              ? LinearGradient(
-                                  colors: [Colors.blue.shade400, Colors.blue],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight)
-                              : null,
                         ),
                         child: Text(
                           chat.message,
@@ -231,8 +232,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     controller: _messageController,
                     decoration: InputDecoration(
                       hintText: 'Type a message...',
-                      hintStyle:
-                          TextStyle(color: Color.fromARGB(255, 233, 144, 26)),
+                      hintStyle: TextStyle(color: Colors.grey),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
@@ -249,12 +249,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 SizedBox(width: 12),
-                IconButton(
-                  icon: Icon(Icons.send, color: Colors.white),
-                  onPressed: _sendMessage,
-                  padding: EdgeInsets.all(0),
-                  splashRadius: 20,
-                  iconSize: 30,
+                CircleAvatar(
+                  backgroundColor: Colors.blue.shade700,
+                  child: IconButton(
+                    icon: Icon(Icons.send, color: Colors.white),
+                    onPressed: _sendMessage,
+                  ),
                 ),
               ],
             ),
